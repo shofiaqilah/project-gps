@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PomBuddy</title>
+    <link rel="icon" type="image/png" href="icon.png">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet Marker Cluster -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <div id="sidebar">
+        <!-- Header -->
+        <div class="sidebar-header">
+            <h2><i class="fas fa-gas-pump"></i> PomBuddy</h2>
+            <p class="subtitle">Temukan SPBU Terdekat dari Lokasimu!</p>
+        </div>
+        
+        <!-- Search Controls -->
+        <div class="control-section">
+            <h3><i class="fas fa-sliders-h"></i> Setting</h3>
+            
+            <div class="control-group">
+                <label><i class="fas fa-crosshairs"></i> Tentukan Jarak</label>
+                <div class="range-control">
+                    <input type="range" id="searchRadius" min="1" max="10" value="2" step="0.5">
+                    <span class="range-value"><span id="searchRadiusValue">2</span> km</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label><i class="fas fa-filter"></i> Maksimal SPBU Ditampilkan</label>
+                <div class="range-control">
+                    <input type="range" id="maxResults" min="5" max="50" value="20" step="5">
+                    <span class="range-value"><span id="maxResultsValue">20</span> SPBU</span>
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <button id="searchBtn" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Cari
+                </button>
+                <button id="recenterBtn" class="btn btn-secondary">
+                    <i class="fas fa-crosshairs"></i> Recenter
+                </button>
+            </div>
+        </div>
+        
+        <!-- Loading Indicator -->
+        <div id="loading" class="loading">
+            <i class="fas fa-spinner fa-spin"></i> Searching for gas stations...
+        </div>
+        
+        <!-- Status Panel -->
+        <div id="status" class="status-panel">
+            <div class="status-header">
+                <h3><i class="fas fa-info-circle"></i> Status</h3>
+            </div>
+            <div class="status-content">
+                <div class="status-item">
+                    <span class="status-icon"><i class="fas fa-map-marker-alt"></i></span>
+                    <div class="status-text">
+                        <span class="status-label">Lokasi Anda</span>
+                        <span id="locationStatus" class="status-value">Tidak terdeteksi</span>
+                    </div>
+                </div>
+                <div class="status-item">
+                    <span class="status-icon"><i class="fas fa-gas-pump"></i></span>
+                    <div class="status-text">
+                        <span class="status-label">SPBU Ditemukan</span>
+                        <span id="stationsCount" class="status-value">0</span>
+                    </div>
+                </div>
+                <!-- <div class="status-item">
+                    <span class="status-icon"><i class="fas fa-sync-alt"></i></span>
+                    <div class="status-text">
+                        <span class="status-label">Last Updated</span>
+                        <span id="lastUpdated" class="status-value">--:--:--</span>
+                    </div>
+                </div> -->
+            </div>
+        </div>
+        
+        <!-- Gas Stations List -->
+        <div id="stationsList" class="stations-list">
+            <div class="list-header">
+                <h3><i class="fas fa-list"></i> Daftar SPBU (<span id="listCount">0</span>)</h3>
+                <button id="sortToggle" class="sort-btn" title="Sort by distance">
+                    <i class="fas fa-sort-amount-down"></i>
+                </button>
+            </div>
+            <div id="stationsContainer" class="stations-container">
+                <div class="empty-list">
+                    <i class="fas fa-gas-pump"></i>
+                    <p>Belum ada SPBU ditemukan.<br>Klik "Cari" untuk mencari.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Map -->
+    <div id="map"></div>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="script.js"></script>
+
+    <script>
+    // Fix map size after page loads
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            if (map) {
+                map.invalidateSize();
+                console.log("Map size invalidated");
+            }
+        }, 500);
+    });
+    
+    // Also fix on resize
+    window.addEventListener('resize', function() {
+        if (map) {
+            setTimeout(function() {
+                map.invalidateSize();
+            }, 100);
+        }
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PomBuddy - Dashboard</title>
+    <link rel="icon" type="image/png" href="icon.png">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Dashboard CSS -->
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="logo">
+                <i class="fas fa-gas-pump"></i>
+                <h1>PomBuddy</h1>
+            </div>
+            <p class="tagline">Temukan SPBU Terdekat Dengan Mudah!</p>
+        </header>
+
+        <!-- Main Content -->
+<main class="dashboard-content">
+    <!-- Welcome Card -->
+    <div class="welcome-card">
+        <h2><i class="fas fa-hand-wave"></i> Selamat Datang di PomBuddy!</h2>
+        <p>Asisten pribadi Anda untuk mencari SPBU terdekat. Dapatkan hasil berbasis lokasi secara real-time dan navigasi yang lebih mudah.</p>
+    </div>
+
+    <!-- Features Grid -->
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-map-marker-alt"></i>
+            </div>
+            <h3>Lokasi Real-time</h3>
+            <p>Gunakan lokasi Anda saat ini untuk menemukan SPBU terdekat di sekitar Anda.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-gas-pump"></i>
+            </div>
+            <h3>Banyak Pilihan SPBU</h3>
+            <p>Menampilkan semua SPBU yang tersedia dalam radius pencarian yang Anda tentukan.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-directions"></i>
+            </div>
+            <h3>Navigasi Mudah</h3>
+            <p>Arahan ke SPBU pilihan Anda hanya dengan satu klik menggunakan Google Maps.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-sliders-h"></i>
+            </div>
+            <h3>Pencarian Fleksibel</h3>
+            <p>Sesuaikan jarak pencarian sesuai kebutuhan, dekat atau jauh.</p>
+        </div>
+    </div>
+
+    <!-- How to Use -->
+    <div class="instructions-card">
+        <h3><i class="fas fa-info-circle"></i> Cara Menggunakan</h3>
+        <ol class="instructions-list">
+            <li><strong>Klik "Mulai Cari SPBU"</strong> untuk membuka peta</li>
+            <li><strong>Izinkan akses lokasi</strong> saat muncul pemberitahuan browser</li>
+            <li><strong>Atur radius pencarian</strong> menggunakan slider (1-10 km)</li>
+            <li><strong>Klik marker SPBU</strong> untuk melihat detail dan arah</li>
+            <li><strong>Gunakan tombol "Pusatkan"</strong> untuk kembali ke lokasi Anda</li>
+        </ol>
+    </div>
+
+    <!-- Action Button -->
+    <div class="action-section">
+        <button id="startAppBtn" class="start-button">
+            <i class="fas fa-play-circle"></i> Mulai Cari SPBU
+        </button>
+        <p class="note">Izinkan akses lokasi Anda agar hasil lebih akurat</p>
+    </div>
+</main>
+
+    <!-- JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Redirect to map page when button is clicked
+            document.getElementById('startAppBtn').addEventListener('click', function() {
+                // You can redirect to your existing map page
+                window.location.href = 'map.html'; // Change this to your map page filename
+            });
+
+            // Optional: Add animation to button click
+            const startBtn = document.getElementById('startAppBtn');
+            startBtn.addEventListener('click', function() {
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading Map...';
+                this.disabled = true;
+            });
+        });
+    </script>
+</body>
+</html>
