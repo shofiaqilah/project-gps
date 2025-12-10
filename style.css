@@ -460,6 +460,42 @@ body {
   z-index: 1;
 }
 
+/* Tambahkan di style.css */
+.route-btn {
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 100%;
+  font-weight: bold;
+  transition: background 0.3s;
+}
+
+.route-btn:hover {
+  background: #2980b9;
+}
+
+.station-action {
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.station-action:hover {
+  background: #2980b9;
+  transform: scale(1.1);
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   #sidebar {
