@@ -460,40 +460,138 @@ body {
   z-index: 1;
 }
 
-/* Tambahkan di style.css */
-.route-btn {
-  background: #3498db;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  width: 100%;
-  font-weight: bold;
-  transition: background 0.3s;
+/* CSS untuk Route Info Panel */
+.route-info-panel {
+  position: absolute;
+  top: 80px;
+  right: 20px;
+  width: 320px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  z-index: 1000;
+  display: none;
+  overflow: hidden;
 }
 
-.route-btn:hover {
-  background: #2980b9;
-}
-
-.station-action {
+.route-info-header {
   background: #3498db;
   color: white;
+  padding: 12px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.route-info-header h4 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.close-btn {
+  background: none;
   border: none;
-  border-radius: 4px;
-  width: 36px;
-  height: 36px;
+  color: white;
+  font-size: 24px;
   cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s;
 }
 
-.station-action:hover {
-  background: #2980b9;
-  transform: scale(1.1);
+.route-summary {
+  padding: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+}
+
+.route-stat {
+  text-align: center;
+}
+
+.route-stat i {
+  display: block;
+  font-size: 20px;
+  color: #3498db;
+  margin-bottom: 5px;
+}
+
+.route-value {
+  display: block;
+  font-size: 18px;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.route-label {
+  display: block;
+  font-size: 12px;
+  color: #7f8c8d;
+}
+
+.clear-route-btn {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.clear-route-btn:hover {
+  background: #c0392b;
+}
+
+.route-steps {
+  padding: 15px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.route-steps h5 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #2c3e50;
+}
+
+.route-step {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.step-number {
+  background: #3498db;
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.step-text {
+  flex-grow: 1;
+  font-size: 14px;
+  color: #34495e;
+}
+
+.step-distance {
+  font-size: 12px;
+  color: #7f8c8d;
+  flex-shrink: 0;
+  margin-left: 10px;
 }
 
 /* Responsive Design */

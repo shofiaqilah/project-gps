@@ -1,8 +1,4 @@
-// script.js - Final (OSRM driving distance + filter by driving radius + fallback)
 
-// -----------------------------
-// Globals
-// -----------------------------
 let map;
 let userMarker;
 let userCircle;
@@ -12,9 +8,9 @@ let userMovedMap = false;
 let foundStations = [];
 let sortByDistance = true;
 
-// variabel untuk routing
-let routingControl = null;
-let currentRoute = null;
+// script.js - Tambah di bagian Globals
+let routingControl = null; // Untuk mengontrol layer rute
+let currentRoute = null; // Untuk menyimpan rute yang aktif
 
 const config = {
   searchRadius: 2000, // meters (default 2 km)
@@ -23,6 +19,9 @@ const config = {
   osrmBatchDelay: 150, // ms pause between batches
 };
 
+// -----------------------------
+// Initialize map
+// -----------------------------
 function initMap() {
   const mapContainer = document.getElementById("map");
   if (!mapContainer) {
@@ -49,115 +48,8 @@ function initMap() {
   });
   map.addLayer(gasStationsLayer);
 
-  // TAMBAH ROUTING
-  initRoutingControl();  // Inisialisasi routing control
-
   updateStatus("Map loaded. Klik 'Cari' untuk mencari SPBU.", "info");
   console.log("Map initialized");
-}
-
-// -----------------------------
-// Initialize routing control
-// -----------------------------
-function initRoutingControl() {
-  routingControl = L.Routing.control({
-    waypoints: [],
-    lineOptions: {
-      styles: [{ color: '#3498db', weight: 6, opacity: 0.8 }],
-      extendToWaypoints: true,
-      missingRouteTolerance: 10
-    },
-    routeWhileDragging: false,
-    showAlternatives: false,
-    altLineOptions: {
-      styles: [{ color: '#e74c3c', weight: 3, opacity: 0.5 }]
-    },
-    show: false, // Sembunyikan panel default
-    addWaypoints: false,
-    draggableWaypoints: false,
-    fitSelectedRoutes: true,
-    createMarker: function(i, waypoint, n) {
-      // Marker khusus untuk start (lokasi user)
-      if (i === 0) {
-        return L.marker(waypoint.latLng, {
-          icon: L.divIcon({
-            className: 'route-start-icon',
-            html: '<div style="background-color: #2ecc71; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(46,204,113,0.9); display: flex; align-items: center; justify-content: center;"><i class="fas fa-user" style="color: white; font-size: 12px;"></i></div>',
-            iconSize: [24, 24],
-            iconAnchor: [12, 12]
-          }),
-          zIndexOffset: 1000
-        });
-      } else {
-        // Marker khusus untuk destination (SPBU)
-        return L.marker(waypoint.latLng, {
-          icon: L.divIcon({
-            className: 'route-end-icon',
-            html: '<div style="background-color: #e74c3c; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(231,76,60,0.9); display: flex; align-items: center; justify-content: center;"><i class="fas fa-gas-pump" style="color: white; font-size: 12px;"></i></div>',
-            iconSize: [24, 24],
-            iconAnchor: [12, 12]
-          }),
-          zIndexOffset: 1000
-        });
-      }
-    }
-  }).addTo(map);
-
-  // Sembunyikan panel routing default
-  routingControl.hide();
-
-  // Event ketika rute ditemukan
-  routingControl.on('routesfound', function(e) {
-    const routes = e.routes;
-    if (routes && routes.length > 0) {
-      currentRoute = routes[0];
-      
-      // Zoom ke rute
-      const bounds = L.latLngBounds(
-        routes[0].coordinates.map(coord => [coord.lat, coord.lng])
-      );
-      map.fitBounds(bounds.pad(0.1));
-    }
-  });
-
-  routingControl.on('routingerror', function(e) {
-    console.error('Routing error:', e.error);
-    updateStatus('Tidak dapat menghitung rute. Coba lagi nanti.', 'error');
-    clearRoute();
-  });
-}
-
-// -----------------------------
-// Show route to station
-// -----------------------------
-function showRouteToStation(stationLat, stationLng, stationName) {
-  if (!lastLocation) {
-    updateStatus('Lokasi Anda belum diketahui. Klik "Cari" dulu.', 'warning');
-    return;
-  }
-
-  // Hapus rute sebelumnya
-  clearRoute();
-
-  updateStatus('Menghitung rute ke ' + stationName + '...', 'info');
-
-  // Set waypoints (start: user location, end: station)
-  routingControl.setWaypoints([
-    L.latLng(lastLocation.lat, lastLocation.lng),
-    L.latLng(stationLat, stationLng)
-  ]);
-  
-  updateStatus('Rute ditampilkan ke ' + stationName, 'success');
-}
-
-// -----------------------------
-// Clear route from map
-// -----------------------------
-function clearRoute() {
-  if (routingControl) {
-    routingControl.setWaypoints([]);
-  }
-  currentRoute = null;
 }
 
 // -----------------------------
@@ -205,6 +97,7 @@ async function searchNearbyStations() {
     updateStatus("Mendapatkan lokasi kamu...", "info");
 
     const location = await getUserLocation();
+
     if (!userMovedMap) {
       map.setView([location.lat, location.lng], 14);
     }
@@ -418,9 +311,210 @@ async function calculateDrivingDistanceOSRM(lat1, lng1, lat2, lng2) {
   }
 }
 
+
 // -----------------------------
-// Display gas stations on map
+// Show driving route using OSRM
 // -----------------------------
+async function showRouteToStation(stationLat, stationLng) {
+  // Remove existing route if any
+  removeExistingRoute();
+  
+  if (!lastLocation) {
+    updateStatus("Lokasi kamu belum tersedia. Klik 'Cari' dulu.", "warning");
+    return;
+  }
+  
+  updateStatus("Menghitung rute terbaik...", "info");
+  
+  const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${lastLocation.lng},${lastLocation.lat};${stationLng},${stationLat}?overview=full&geometries=geojson&steps=true`;
+  
+  try {
+    const response = await fetch(osrmUrl);
+    if (!response.ok) throw new Error("Gagal mendapatkan rute");
+    
+    const data = await response.json();
+    
+    if (data.routes && data.routes.length > 0) {
+      const route = data.routes[0];
+      const distanceKm = (route.distance / 1000).toFixed(2);
+      const durationMin = Math.round(route.duration / 60);
+      
+      // Create GeoJSON for the route
+      const routeGeoJSON = {
+        type: "Feature",
+        properties: {
+          distance: distanceKm,
+          duration: durationMin,
+          instructions: route.legs[0].steps.map(step => step.maneuver.instruction)
+        },
+        geometry: route.geometry
+      };
+      
+      // Create routing control
+      routingControl = L.Routing.control({
+        waypoints: [
+          L.latLng(lastLocation.lat, lastLocation.lng),
+          L.latLng(stationLat, stationLng)
+        ],
+        routeWhileDragging: false,
+        showAlternatives: false,
+        addWaypoints: false,
+        draggableWaypoints: false,
+        fitSelectedRoutes: true,
+        show: false, // Hide default instructions panel
+        createMarker: function() { return null; } // No markers
+      }).addTo(map);
+      
+      // Customize route line
+      routingControl.on('routesfound', function(e) {
+        const routes = e.routes;
+        currentRoute = routes[0];
+        
+        // Style the route
+        const polyline = e.routes[0].coordinates;
+        const routeLine = L.polyline(polyline, {
+          color: '#3498db',
+          weight: 5,
+          opacity: 0.7,
+          dashArray: '10, 10',
+          lineJoin: 'round'
+        }).addTo(map);
+        
+        // Add start and end markers with custom icons
+        const startIcon = L.divIcon({
+          className: 'route-start-icon',
+          html: '<div style="background-color: #2ecc71; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 8px rgba(46,204,113,0.8);"></div>',
+          iconSize: [20, 20],
+          iconAnchor: [10, 10]
+        });
+        
+        const endIcon = L.divIcon({
+          className: 'route-end-icon',
+          html: '<div style="background-color: #e74c3c; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 8px rgba(231,76,60,0.8);"></div>',
+          iconSize: [20, 20],
+          iconAnchor: [10, 10]
+        });
+        
+        // Start marker
+        L.marker([lastLocation.lat, lastLocation.lng], {
+          icon: startIcon,
+          zIndexOffset: 1000
+        }).addTo(map)
+          .bindPopup('<strong><i class="fas fa-play-circle"></i> Titik Mulai</strong><br>Lokasi kamu saat ini');
+        
+        // End marker
+        L.marker([stationLat, stationLng], {
+          icon: endIcon,
+          zIndexOffset: 1000
+        }).addTo(map)
+          .bindPopup(`<strong><i class="fas fa-flag-checkered"></i> Tujuan</strong><br>SPBU`);
+        
+        // Fit bounds to show entire route
+        map.fitBounds(routeLine.getBounds());
+        
+        // Update status with route info
+        updateStatus(`Rute ditemukan: ${distanceKm} km (${durationMin} menit)`, "success");
+        
+        // Show route info panel
+        showRouteInfoPanel(distanceKm, durationMin, route.legs[0].steps);
+      });
+      
+    } else {
+      updateStatus("Tidak bisa menemukan rute untuk lokasi ini.", "warning");
+    }
+  } catch (error) {
+    console.error("Error fetching route:", error);
+    updateStatus("Gagal menghitung rute. Coba lagi.", "error");
+  }
+}
+
+// -----------------------------
+// Remove existing route
+// -----------------------------
+function removeExistingRoute() {
+  if (routingControl) {
+    map.removeControl(routingControl);
+    routingControl = null;
+  }
+  
+  // Remove any route-related layers
+  map.eachLayer(function(layer) {
+    if (layer instanceof L.Polyline && layer.options.color === '#3498db') {
+      map.removeLayer(layer);
+    }
+    if (layer instanceof L.Marker && 
+        (layer.options.icon?.options?.className === 'route-start-icon' || 
+         layer.options.icon?.options?.className === 'route-end-icon')) {
+      map.removeLayer(layer);
+    }
+  });
+  
+  // Hide route info panel
+  const routeInfoPanel = document.getElementById("routeInfoPanel");
+  if (routeInfoPanel) {
+    routeInfoPanel.style.display = "none";
+  }
+  
+  currentRoute = null;
+}
+
+// -----------------------------
+// Show route info panel
+// -----------------------------
+function showRouteInfoPanel(distance, duration, steps) {
+  let panel = document.getElementById("routeInfoPanel");
+  
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.id = "routeInfoPanel";
+    panel.className = "route-info-panel";
+    panel.innerHTML = `
+      <div class="route-info-header">
+        <h4><i class="fas fa-route"></i> Rute Perjalanan</h4>
+        <button id="closeRoutePanel" class="close-btn">&times;</button>
+      </div>
+      <div class="route-summary">
+        <div class="route-stat">
+          <i class="fas fa-route"></i>
+          <span class="route-value">${distance} km</span>
+          <span class="route-label">Jarak</span>
+        </div>
+        <div class="route-stat">
+          <i class="fas fa-clock"></i>
+          <span class="route-value">${duration} mnt</span>
+          <span class="route-label">Waktu</span>
+        </div>
+        <button id="clearRouteBtn" class="clear-route-btn">
+          <i class="fas fa-times"></i> Hapus Rute
+        </button>
+      </div>
+      <div class="route-steps">
+        <h5><i class="fas fa-list-ol"></i> Petunjuk Perjalanan:</h5>
+        <div class="steps-container"></div>
+      </div>
+    `;
+    document.querySelector(".map-container").appendChild(panel);
+    
+    // Add event listeners
+    document.getElementById("closeRoutePanel").addEventListener("click", removeExistingRoute);
+    document.getElementById("clearRouteBtn").addEventListener("click", removeExistingRoute);
+  }
+  
+  // Update steps
+  const stepsContainer = panel.querySelector(".steps-container");
+  if (steps && steps.length > 0) {
+    stepsContainer.innerHTML = steps.slice(0, 10).map((step, index) => `
+      <div class="route-step">
+        <div class="step-number">${index + 1}</div>
+        <div class="step-text">${step.maneuver.instruction || ''}</div>
+        <div class="step-distance">${(step.distance / 1000).toFixed(2)} km</div>
+      </div>
+    `).join('');
+  }
+  
+  panel.style.display = "block";
+}
+
 function displayGasStations(stations, userLat, userLng) {
   gasStationsLayer.clearLayers();
   if (!stations || stations.length === 0) {
@@ -507,7 +601,6 @@ function updateStationsList() {
           ? `${st.distance.toFixed(2)}`
           : "N/A";
 
-      // UBAH TOMBOL DI SINI:
       return `
       <div class="station-item" data-index="${idx}">
         <div class="station-number">${idx + 1}</div>
@@ -520,14 +613,15 @@ function updateStationsList() {
           <span class="distance-value">${distText}</span>
           <span class="distance-unit">km</span>
         </div>
-        <button class="station-action" onclick="showRouteToStation(${st.lat}, ${st.lng}, '${name.replace(/'/g, "\\'")}')" title="Tampilkan Rute">
-          <i class="fas fa-route"></i>
+        <button class="station-action" data-lat="${st.lat}" data-lng="${
+        st.lng
+      }" title="Get Directions">
+          <i class="fas fa-directions"></i>
         </button>
       </div>
     `;
     })
     .join("");
-
 
   // Click handlers: zoom to station & open popup
   container.querySelectorAll(".station-item").forEach((item) => {
@@ -551,7 +645,7 @@ function updateStationsList() {
     });
   });
 
-  // Button untuk navigasi langsung
+  // Buttons for direct navigation
   container.querySelectorAll(".station-action").forEach((btn) => {
     btn.addEventListener("click", function (e) {
       e.stopPropagation();
@@ -584,37 +678,30 @@ function sortStations() {
 // -----------------------------
 // Haversine fallback (km)
 // -----------------------------
-// Menghitung jarak garis lurus antara user dan SPBU. Dipakai untuk estimasi cepat dan juga sebagai fallback ketika OSRM tidak bisa menghitung jarak berkendara
-function calculateDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371; // km
-
-  const latRad1 = lat1 * Math.PI / 180;
-  const latRad2 = lat2 * Math.PI / 180;
-
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
+function calculateDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lng2 - lng1) * Math.PI) / 180;
 
   const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(latRad1) * Math.cos(latRad2) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
   return R * c;
 }
 
-
 // -----------------------------
-// Navigate to SPBU
+// Navigate (open Google Maps with origin if available)
 // -----------------------------
 function navigateToStation(lat, lng) {
-  // Cari nama station dari foundStations
-  const station = foundStations.find(s => s.lat === lat && s.lng === lng);
-  const stationName = station?.tags?.name || "SPBU";
-  
-  // Tampilkan rute di web
-  showRouteToStation(lat, lng, stationName);
+  let url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  if (lastLocation && lastLocation.lat && lastLocation.lng) {
+    url += `&origin=${lastLocation.lat},${lastLocation.lng}`;
+  }
+  window.open(url, "_blank");
 }
 
 // -----------------------------
@@ -703,15 +790,10 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // TAMBAH EVENT UNTUK ESCAPE KEY:
   document.addEventListener("keydown", function (e) {
     if (e.key === "Enter") {
       e.preventDefault();
       searchNearbyStations();
-    }
-    // Escape untuk clear route
-    if (e.key === "Escape") {
-      clearRoute();
     }
   });
 
@@ -727,5 +809,5 @@ document.addEventListener("DOMContentLoaded", function () {
     }, 200)
   );
 
-  console.log("Gas Station Finder dengan routing langsung initialized");
+  console.log("Gas Station Finder initialized");
 });
