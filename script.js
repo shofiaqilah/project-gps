@@ -124,6 +124,7 @@ async function searchNearbyStations() {
 // -----------------------------
 // Update / create user marker
 // -----------------------------
+
 function updateUserMarker(lat, lng) {
   if (!userMarker) {
     const userIcon = L.divIcon({
@@ -316,117 +317,51 @@ async function calculateDrivingDistanceOSRM(lat1, lng1, lat2, lng2) {
 // Show driving route using OSRM
 // -----------------------------
 async function showRouteToStation(stationLat, stationLng) {
-  // Remove existing route if any
   removeExistingRoute();
-  
+
   if (!lastLocation) {
     updateStatus("Lokasi kamu belum tersedia. Klik 'Cari' dulu.", "warning");
     return;
   }
-  
+
   updateStatus("Menghitung rute terbaik...", "info");
-  
-  const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${lastLocation.lng},${lastLocation.lat};${stationLng},${stationLat}?overview=full&geometries=geojson&steps=true`;
-  
+
+  const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${lastLocation.lng},${lastLocation.lat};${stationLng},${stationLat}?overview=full&geometries=polyline`;
+
   try {
     const response = await fetch(osrmUrl);
-    if (!response.ok) throw new Error("Gagal mendapatkan rute");
-    
+    if (!response.ok) throw new Error("OSRM error");
+
     const data = await response.json();
-    
-    if (data.routes && data.routes.length > 0) {
-      const route = data.routes[0];
-      const distanceKm = (route.distance / 1000).toFixed(2);
-      const durationMin = Math.round(route.duration / 60);
-      
-      // Create GeoJSON for the route
-      const routeGeoJSON = {
-        type: "Feature",
-        properties: {
-          distance: distanceKm,
-          duration: durationMin,
-          instructions: route.legs[0].steps.map(step => step.maneuver.instruction)
-        },
-        geometry: route.geometry
-      };
-      
-      // Create routing control
-      routingControl = L.Routing.control({
-        waypoints: [
-          L.latLng(lastLocation.lat, lastLocation.lng),
-          L.latLng(stationLat, stationLng)
-        ],
-        routeWhileDragging: false,
-        showAlternatives: false,
-        addWaypoints: false,
-        draggableWaypoints: false,
-        fitSelectedRoutes: true,
-        show: false, // Hide default instructions panel
-        createMarker: function() { return null; } // No markers
-      }).addTo(map);
-      
-      // Customize route line
-      routingControl.on('routesfound', function(e) {
-        const routes = e.routes;
-        currentRoute = routes[0];
-        
-        // Style the route
-        const polyline = e.routes[0].coordinates;
-        const routeLine = L.polyline(polyline, {
-          color: '#3498db',
-          weight: 5,
-          opacity: 0.7,
-          dashArray: '10, 10',
-          lineJoin: 'round'
-        }).addTo(map);
-        
-        // Add start and end markers with custom icons
-        const startIcon = L.divIcon({
-          className: 'route-start-icon',
-          html: '<div style="background-color: #2ecc71; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 8px rgba(46,204,113,0.8);"></div>',
-          iconSize: [20, 20],
-          iconAnchor: [10, 10]
-        });
-        
-        const endIcon = L.divIcon({
-          className: 'route-end-icon',
-          html: '<div style="background-color: #e74c3c; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 8px rgba(231,76,60,0.8);"></div>',
-          iconSize: [20, 20],
-          iconAnchor: [10, 10]
-        });
-        
-        // Start marker
-        L.marker([lastLocation.lat, lastLocation.lng], {
-          icon: startIcon,
-          zIndexOffset: 1000
-        }).addTo(map)
-          .bindPopup('<strong><i class="fas fa-play-circle"></i> Titik Mulai</strong><br>Lokasi kamu saat ini');
-        
-        // End marker
-        L.marker([stationLat, stationLng], {
-          icon: endIcon,
-          zIndexOffset: 1000
-        }).addTo(map)
-          .bindPopup(`<strong><i class="fas fa-flag-checkered"></i> Tujuan</strong><br>SPBU`);
-        
-        // Fit bounds to show entire route
-        map.fitBounds(routeLine.getBounds());
-        
-        // Update status with route info
-        updateStatus(`Rute ditemukan: ${distanceKm} km (${durationMin} menit)`, "success");
-        
-        // Show route info panel
-        showRouteInfoPanel(distanceKm, durationMin, route.legs[0].steps);
-      });
-      
-    } else {
-      updateStatus("Tidak bisa menemukan rute untuk lokasi ini.", "warning");
-    }
-  } catch (error) {
-    console.error("Error fetching route:", error);
+    if (!data.routes || !data.routes[0]) throw new Error("No route");
+
+    const route = data.routes[0];
+    const distanceKm = (route.distance / 1000).toFixed(2);
+    const durationMin = Math.round(route.duration / 60);
+
+    // Leaflet Routing Machine
+    routingControl = L.Routing.control({
+      waypoints: [
+        L.latLng(lastLocation.lat, lastLocation.lng),
+        L.latLng(stationLat, stationLng)
+      ],
+      show: false,
+      addWaypoints: false,
+      draggableWaypoints: false,
+      lineOptions: {
+        styles: [{ color: "#3498db", weight: 5, opacity: 0.8 }]
+      },
+      createMarker: () => null
+    }).addTo(map);
+
+    updateStatus(`Rute ditemukan: ${distanceKm} km (${durationMin} menit)`, "success");
+
+  } catch (err) {
+    console.error("Route error:", err);
     updateStatus("Gagal menghitung rute. Coba lagi.", "error");
   }
 }
+
 
 // -----------------------------
 // Remove existing route
@@ -539,31 +474,50 @@ function displayGasStations(stations, userLat, userLng) {
         : "N/A";
 
     const popupContent = `
-      <div class="gas-station-popup">
-        <h4><i class="fas fa-gas-pump"></i> ${name}</h4>
-        <p><strong>Brand:</strong> ${brand}</p>
-        <p><strong>Jarak (rute):</strong> ${distText}</p>
-        <hr>
-        <button class="navigate-btn" data-lat="${st.lat}" data-lng="${st.lng}" style="background:#2ecc71;color:white;border:none;padding:6px 10px;border-radius:3px;cursor:pointer;width:100%;">
-          <i class="fas fa-directions"></i> Arahkan ke sini
-        </button>
-      </div>
-    `;
-    marker.bindPopup(popupContent);
-    gasStationsLayer.addLayer(marker);
-  });
+  <div class="gas-station-popup">
+    <h4><i class="fas fa-gas-pump"></i> ${name}</h4>
+    <p><strong>Brand:</strong> ${brand}</p>
+    <p><strong>Jarak (rute):</strong> ${distText}</p>
+    <hr>
+    <div class="popup-buttons">
+      <button class="show-route-btn" data-lat="${st.lat}" data-lng="${st.lng}"
+        style="background:#3498db;color:white;border:none;padding:6px 10px;border-radius:3px;cursor:pointer;width:100%;margin-bottom:5px;">
+        <i class="fas fa-route"></i> Tampilkan Rute
+      </button>
+      <button class="navigate-btn" data-lat="${st.lat}" data-lng="${st.lng}"
+        style="background:#2ecc71;color:white;border:none;padding:6px 10px;border-radius:3px;cursor:pointer;width:100%;">
+        <i class="fas fa-directions"></i> Buka di Google Maps
+      </button>
+    </div>
+  </div>
+`;
 
-  // attach handler for navigate buttons inside popups
-  gasStationsLayer.on("popupopen", (e) => {
-    const popupNode = e.popup.getElement();
-    if (!popupNode) return;
-    const btn = popupNode.querySelector(".navigate-btn");
-    if (!btn) return;
-    btn.addEventListener("click", function () {
-      const lat = parseFloat(this.getAttribute("data-lat"));
-      const lng = parseFloat(this.getAttribute("data-lng"));
+gasStationsLayer.on("popupopen", (e) => {
+  const popupNode = e.popup.getElement();
+  if (!popupNode) return;
+
+  const showRouteBtn = popupNode.querySelector(".show-route-btn");
+  if (showRouteBtn) {
+    showRouteBtn.addEventListener("click", function () {
+      const lat = parseFloat(this.dataset.lat);
+      const lng = parseFloat(this.dataset.lng);
+      showRouteToStation(lat, lng);
+      e.popup.close();
+    });
+  }
+
+  const navigateBtn = popupNode.querySelector(".navigate-btn");
+  if (navigateBtn) {
+    navigateBtn.addEventListener("click", function () {
+      const lat = parseFloat(this.dataset.lat);
+      const lng = parseFloat(this.dataset.lng);
       navigateToStation(lat, lng);
     });
+  }
+});
+
+    marker.bindPopup(popupContent);
+    gasStationsLayer.addLayer(marker);
   });
 }
 
@@ -710,52 +664,6 @@ function navigateToStation(lat, lng) {
     window.open(url, '_blank');
   }, 1000);
 }
-
-// Tambahkan tombol "Tampilkan Rute" di popup station
-// Update bagian displayGasStations - ubah popupContent:
-const popupContent = `
-  <div class="gas-station-popup">
-    <h4><i class="fas fa-gas-pump"></i> ${name}</h4>
-    <p><strong>Brand:</strong> ${brand}</p>
-    <p><strong>Jarak (rute):</strong> ${distText}</p>
-    <hr>
-    <div class="popup-buttons">
-      <button class="show-route-btn" data-lat="${st.lat}" data-lng="${st.lng}" style="background:#3498db;color:white;border:none;padding:6px 10px;border-radius:3px;cursor:pointer;width:100%;margin-bottom:5px;">
-        <i class="fas fa-route"></i> Tampilkan Rute
-      </button>
-      <button class="navigate-btn" data-lat="${st.lat}" data-lng="${st.lng}" style="background:#2ecc71;color:white;border:none;padding:6px 10px;border-radius:3px;cursor:pointer;width:100%;">
-        <i class="fas fa-directions"></i> Buka di Google Maps
-      </button>
-    </div>
-  </div>
-`;
-
-// Update handler untuk tombol di popup
-gasStationsLayer.on("popupopen", (e) => {
-  const popupNode = e.popup.getElement();
-  if (!popupNode) return;
-  
-  // Handler untuk tombol "Tampilkan Rute"
-  const showRouteBtn = popupNode.querySelector(".show-route-btn");
-  if (showRouteBtn) {
-    showRouteBtn.addEventListener("click", function() {
-      const lat = parseFloat(this.getAttribute("data-lat"));
-      const lng = parseFloat(this.getAttribute("data-lng"));
-      showRouteToStation(lat, lng);
-      e.popup.close();
-    });
-  }
-  
-  // Handler untuk tombol "Buka di Google Maps"
-  const navigateBtn = popupNode.querySelector(".navigate-btn");
-  if (navigateBtn) {
-    navigateBtn.addEventListener("click", function() {
-      const lat = parseFloat(this.getAttribute("data-lat"));
-      const lng = parseFloat(this.getAttribute("data-lng"));
-      navigateToStation(lat, lng);
-    });
-  }
-});
 
 // -----------------------------
 // UI helpers: status / loading / last updated
