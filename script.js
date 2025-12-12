@@ -696,13 +696,66 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
 // -----------------------------
 // Navigate (open Google Maps with origin if available)
 // -----------------------------
+// Update fungsi navigateToStation
 function navigateToStation(lat, lng) {
-  let url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-  if (lastLocation && lastLocation.lat && lastLocation.lng) {
-    url += `&origin=${lastLocation.lat},${lastLocation.lng}`;
-  }
-  window.open(url, "_blank");
+  // Show route on map first
+  showRouteToStation(lat, lng);
+  
+  // Then open Google Maps in new tab
+  setTimeout(() => {
+    let url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    if (lastLocation && lastLocation.lat && lastLocation.lng) {
+      url += `&origin=${lastLocation.lat},${lastLocation.lng}`;
+    }
+    window.open(url, '_blank');
+  }, 1000);
 }
+
+// Tambahkan tombol "Tampilkan Rute" di popup station
+// Update bagian displayGasStations - ubah popupContent:
+const popupContent = `
+  <div class="gas-station-popup">
+    <h4><i class="fas fa-gas-pump"></i> ${name}</h4>
+    <p><strong>Brand:</strong> ${brand}</p>
+    <p><strong>Jarak (rute):</strong> ${distText}</p>
+    <hr>
+    <div class="popup-buttons">
+      <button class="show-route-btn" data-lat="${st.lat}" data-lng="${st.lng}" style="background:#3498db;color:white;border:none;padding:6px 10px;border-radius:3px;cursor:pointer;width:100%;margin-bottom:5px;">
+        <i class="fas fa-route"></i> Tampilkan Rute
+      </button>
+      <button class="navigate-btn" data-lat="${st.lat}" data-lng="${st.lng}" style="background:#2ecc71;color:white;border:none;padding:6px 10px;border-radius:3px;cursor:pointer;width:100%;">
+        <i class="fas fa-directions"></i> Buka di Google Maps
+      </button>
+    </div>
+  </div>
+`;
+
+// Update handler untuk tombol di popup
+gasStationsLayer.on("popupopen", (e) => {
+  const popupNode = e.popup.getElement();
+  if (!popupNode) return;
+  
+  // Handler untuk tombol "Tampilkan Rute"
+  const showRouteBtn = popupNode.querySelector(".show-route-btn");
+  if (showRouteBtn) {
+    showRouteBtn.addEventListener("click", function() {
+      const lat = parseFloat(this.getAttribute("data-lat"));
+      const lng = parseFloat(this.getAttribute("data-lng"));
+      showRouteToStation(lat, lng);
+      e.popup.close();
+    });
+  }
+  
+  // Handler untuk tombol "Buka di Google Maps"
+  const navigateBtn = popupNode.querySelector(".navigate-btn");
+  if (navigateBtn) {
+    navigateBtn.addEventListener("click", function() {
+      const lat = parseFloat(this.getAttribute("data-lat"));
+      const lng = parseFloat(this.getAttribute("data-lng"));
+      navigateToStation(lat, lng);
+    });
+  }
+});
 
 // -----------------------------
 // UI helpers: status / loading / last updated
